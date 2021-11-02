@@ -71,7 +71,6 @@ class SimpleObjectHydrator extends ArrayHydrator
         $classMetaData = $this->_em->getClassMetadata($className);
         $mappings = $classMetaData->getAssociationMappings();
         $entity = $this->createEntity($classMetaData, $data);
-        $reflection = new \ReflectionObject($entity);
 
         foreach ($data as $name => $value) {
             if (isset($mappings[$name]) && is_array($value)) {
@@ -95,15 +94,15 @@ class SimpleObjectHydrator extends ArrayHydrator
 
             if (
                 $classMetaData->inheritanceType === ClassMetadata::INHERITANCE_TYPE_SINGLE_TABLE
-               || $classMetaData->inheritanceType === ClassMetadata::INHERITANCE_TYPE_JOINED
+                || $classMetaData->inheritanceType === ClassMetadata::INHERITANCE_TYPE_JOINED
             ) {
-               try {
-                   $property = $reflection->getProperty($name);
-               } catch (\ReflectionException $e) {
-                   continue;
-               }
+                try {
+                    $property = $classMetaData->getReflectionClass()->getProperty($name);
+                } catch (\ReflectionException $e) {
+                    continue;
+                }
             } else {
-                $property = $reflection->getProperty($name);
+                $property = $classMetaData->getReflectionClass()->getProperty($name);
             }
 
             if ($property->isPublic()) {
