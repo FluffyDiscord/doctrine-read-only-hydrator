@@ -306,20 +306,19 @@ PHP;
      */
     protected function getPhpForParameter(\ReflectionParameter $parameter)
     {
+        $type = $parameter->getType();
+        
         $php = null;
         if (
             version_compare(PHP_VERSION, '7.1.0', '>=')
             && $parameter->hasType()
-            && $parameter->getType()->allowsNull()
+            && $type->allowsNull()
         ) {
             $php .= '?';
         }
-        if ($parameter->getClass() instanceof \ReflectionClass) {
-            $php .= $this->getFullQualifiedClassName($parameter->getClass()->name) . ' ';
-        } elseif ($parameter->isCallable()) {
-            $php .= 'callable ';
-        } elseif ($parameter->isArray()) {
-            $php .= 'array ';
+        
+        if ($type instanceof \ReflectionClass) {
+            $php .= $this->getFullQualifiedClassName($type->getName()) . ' ';
         } elseif (
             version_compare(PHP_VERSION, '7.0.0', '>=')
             && $parameter->hasType()
