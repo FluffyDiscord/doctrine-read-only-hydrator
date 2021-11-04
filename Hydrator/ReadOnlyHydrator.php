@@ -246,6 +246,7 @@ PHP;
         foreach ($reflectionMethod->getParameters() as $parameter) {
             $parameters[] = $this->getPhpForParameter($parameter);
         }
+
         $signature .= implode(', ', $parameters) . ')';
 
         $method = $reflectionMethod->name;
@@ -303,29 +304,41 @@ PHP;
     /**
      * @param \ReflectionParameter $parameter
      * @return string
+     * @throws \ReflectionException
      */
     protected function getPhpForParameter(\ReflectionParameter $parameter)
     {
-        $type = $parameter->getType();
-        
-        $php = null;
-        if (
-            version_compare(PHP_VERSION, '7.1.0', '>=')
-            && $parameter->hasType()
-            && $type->allowsNull()
-        ) {
-            $php .= '?';
-        }
-        
-        if ($type instanceof \ReflectionClass) {
-            $php .= $this->getFullQualifiedClassName($type->getName()) . ' ';
-        } elseif (
-            version_compare(PHP_VERSION, '7.0.0', '>=')
-            && $parameter->hasType()
-        ) {
-            $php .= static::extractNameFromReflexionType($parameter->getType()) . ' ';
+        $types = $parameter->getType();
+        if($types !== null && get_class($types) === "ReflectionUnionType") {
+            $types = $types->getTypes();
+        } else {
+            $types = [$types];
         }
 
+        $values = [];
+        /** @var \ReflectionUnionType[]|\ReflectionType|null $type */
+        foreach ($types as $type) {
+            $php = null;
+            if (
+                version_compare(PHP_VERSION, '7.1.0', '>=')
+                && $parameter->hasType()
+                && $type->allowsNull()
+            ) {
+                $php .= '?';
+            }
+
+            if ($type !== null && (class_exists($type->getName()) || interface_exists($type->getName()))) {
+                $php .= $this->getFullQualifiedClassName($type->getName()) ;
+            } elseif (
+                version_compare(PHP_VERSION, '7.0.0', '>=')
+                && $parameter->hasType()
+            ) {
+                $php .= static::extractNameFromReflexionType($parameter->getType()) ;
+            }
+            $values[] = $php;
+        }
+
+        $php = implode('|', $values).' ';
         if ($parameter->isPassedByReference()) {
             $php .= '&';
         }
