@@ -261,30 +261,47 @@ PHP;
             && $reflectionMethod->hasReturnType()
         ) {
             $signature .= ': ';
-            if (version_compare(PHP_VERSION, '7.1.0', '>=') && $reflectionMethod->getReturnType()->allowsNull()) {
+
+            if(version_compare(PHP_VERSION, '8.0.0', '>=') && $reflectionMethod->getReturnType() instanceof \ReflectionUnionType) {
+                $types = $reflectionMethod->getReturnType()->getTypes();
+            } else {
+                $types = [$reflectionMethod->getReturnType()];
+            }
+
+            if (count($types) <= 1 && version_compare(PHP_VERSION, '7.1.0', '>=') && $reflectionMethod->getReturnType()->allowsNull()) {
                 $signature .= '?';
             }
 
-            if ($reflectionMethod->getReturnType()->isBuiltin()) {
-                $returnType = static::extractNameFromReflexionType($reflectionMethod->getReturnType());
-            } else {
-                switch (static::extractNameFromReflexionType($reflectionMethod->getReturnType())) {
-                    case 'self':
-                        $returnType = $this->getFullQualifiedClassName(
-                            $reflectionMethod->getDeclaringClass()->getName()
-                        );
-                        break;
-                    case 'parent':
-                        throw new \Exception('Function with return type parent can\'t be overloaded.');
-                    default:
-                        $returnType = $this->getFullQualifiedClassName(
-                            static::extractNameFromReflexionType($reflectionMethod->getReturnType())
-                        );
+            $values = [];
+            foreach ($types as $type) {
+                if($type === null) {
+                    $values[] = 'null';
+                    continue;
                 }
-            }
-            $returnKeyWord = ($returnType === 'void') ? null : 'return ';
 
-            $signature .= $returnType;
+                if ($type->isBuiltin()) {
+                    $type = static::extractNameFromReflexionType($type);
+                } else {
+                    switch (static::extractNameFromReflexionType($type)) {
+                        case 'self':
+                            $type = $this->getFullQualifiedClassName(
+                                $reflectionMethod->getDeclaringClass()->getName()
+                            );
+                            break;
+                        case 'parent':
+                            throw new \Exception('Function with return type parent can\'t be overloaded.');
+                        default:
+                            $type = $this->getFullQualifiedClassName(
+                                static::extractNameFromReflexionType($type)
+                            );
+                    }
+                }
+
+                $values[] = $type;
+            }
+
+            $returnKeyWord = (count($values) <= 1 && $values[0] === 'void') ? null : 'return ';
+            $signature .= implode('|', $values);
         } else {
             $returnKeyWord = 'return ';
         }
