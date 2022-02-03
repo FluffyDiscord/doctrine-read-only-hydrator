@@ -326,12 +326,14 @@ PHP;
     protected function getPhpForParameter(\ReflectionParameter $parameter)
     {
         $types = $parameter->getType();
-        if($types !== null && get_class($types) === "ReflectionUnionType") {
+        if($types === null) {
+            $types = [];
+        } elseif(get_class($types) === "ReflectionUnionType") {
             $types = $types->getTypes();
         } else {
             $types = [$types];
         }
-
+        
         $values = [];
         $hasNull = false;
         $needsNull = false;
