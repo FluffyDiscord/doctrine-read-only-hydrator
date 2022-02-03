@@ -333,29 +333,35 @@ PHP;
         }
 
         $values = [];
+        $hasNull = false;
+        $needsNull = false;
         /** @var \ReflectionUnionType[]|\ReflectionType|null $type */
         foreach ($types as $type) {
-            $php = null;
+            $php = $type->getName();
             if (
                 version_compare(PHP_VERSION, '7.1.0', '>=')
                 && $parameter->hasType()
                 && $type->allowsNull()
             ) {
-                $php .= '?';
+                $needsNull = true;
             }
 
             if ($type !== null && (class_exists($type->getName()) || interface_exists($type->getName()))) {
-                $php .= $this->getFullQualifiedClassName($type->getName()) ;
-            } elseif (
-                version_compare(PHP_VERSION, '7.0.0', '>=')
-                && $parameter->hasType()
-            ) {
-                $php .= static::extractNameFromReflexionType($parameter->getType()) ;
+                $php = $this->getFullQualifiedClassName($type->getName()) ;
             }
+
+            if($type->getName() === 'null') {
+                $hasNull = true;
+            }
+
             $values[] = $php;
         }
 
         $php = implode('|', $values).' ';
+        if($needsNull && !$hasNull) {
+            $php = '?'.$php;
+        }
+
         if ($parameter->isPassedByReference()) {
             $php .= '&';
         }
