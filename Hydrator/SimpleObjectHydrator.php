@@ -108,6 +108,25 @@ class SimpleObjectHydrator extends ArrayHydrator
             if ($property->isPublic()) {
                 $entity->$name = $value;
             } else {
+                /** @var \UnitEnum|\BackedEnum $enumClass */
+                $enumClass = null;
+                foreach ($property->getAttributes() as $attribute) {
+                    $enumClass = $attribute->getArguments()['enumType'] ?? null;
+                    if($enumClass !== null) {
+                        break;
+                    }
+                }
+
+                if($enumClass !== null) {
+                    $enumInterfaces = array_keys(class_implements($enumClass));
+
+                    if(in_array(\BackedEnum::class, $enumInterfaces)) {
+                        $value = $enumClass::tryFrom($value);
+                    } elseif (in_array(\UnitEnum::class, $enumInterfaces)) {
+                        $value = $enumClass::$value;
+                    }
+                }
+
                 $property->setAccessible(true);
                 $property->setValue($entity, $value);
                 $property->setAccessible(false);
