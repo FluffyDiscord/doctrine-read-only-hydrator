@@ -99,11 +99,6 @@ class SimpleObjectHydrator extends ArrayHydrator
                 continue;
             }
 
-            $enumValue = $this->getEnumForValue($classMetaData, $property, $value);
-            if($enumValue !== null) {
-                $value = $enumValue;
-            }
-
             //$property->setAccessible(true);
             $property->setValue($entity, $value);
             //$property->setAccessible(false);
